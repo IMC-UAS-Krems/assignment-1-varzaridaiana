@@ -57,7 +57,6 @@ class TestTotalListeningTime:
     def test_known_period_value(self, platform: StreamingPlatform) -> None:
         from streaming.sessions import ListeningSession
 
-        # Use existing fixture data (conftest.py)
         user = platform.get_user("u1")
         track = platform.get_track("t1")
         session = ListeningSession("s1", user, track, RECENT, 120)
