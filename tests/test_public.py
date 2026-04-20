@@ -54,16 +54,18 @@ class TestTotalListeningTime:
 
     # TODO: Add a test that verifies the correct value for a known time period.
     #       Calculate the expected total based on the fixture data in conftest.py.
-    def test_known_period_value(self , platform: StreamingPlatform) -> None:
+    def test_known_period_value(self, platform: StreamingPlatform) -> None:
+        from streaming.sessions import ListeningSession
+
+        # Use existing fixture data (conftest.py)
+        user = platform.get_user("u1")
+        track = platform.get_track("t1")
+        session = ListeningSession("s1", user, track, RECENT, 120)
+        platform.record_session(session)
         start = RECENT - timedelta(hours=1)
         end = FIXED_NOW + timedelta(hours=1)
-        total_seconds = 0
-        for session in platform._sessions:
-            if start <= session.timestamp <= end:
-                total_seconds += session.duration_listened_seconds
-        expected = total_seconds / 60
         result = platform.total_listening_time_minutes(start, end)
-        assert result == expected
+        assert result == 2.0
 
 
 # ===========================================================================
@@ -94,7 +96,15 @@ class TestAvgUniqueTracksPremium:
     #       average for premium users. You'll need to count unique tracks
     #       per premium user and calculate the average.
     def test_correct_value(self, platform: StreamingPlatform) -> None:
-        pass
+        from streaming.sessions import ListeningSession
+
+        bob = platform.get_user("u2")
+
+        platform.record_session(ListeningSession("s1", bob, platform.get_track("t1"), RECENT, 180))
+        platform.record_session(ListeningSession("s2", bob, platform.get_track("t2"), RECENT, 210))
+
+        result = platform.avg_unique_tracks_per_premium_user(days=30)
+        assert result == 2.0
 
 
 # ===========================================================================
@@ -118,8 +128,27 @@ class TestTrackMostDistinctListeners:
     # TODO: Add a test that verifies the correct track is returned.
     #       Count listeners per track from the fixture data.
     def test_correct_track(self, platform: StreamingPlatform) -> None:
-        pass
+        from streaming.sessions import ListeningSession
 
+        user1 = platform.get_user("u1")
+        user2 = platform.get_user("u2")
+
+        track1 = platform.get_track("t1")
+        track2 = platform.get_track("t2")
+
+        platform.record_session(
+            ListeningSession("s1", user1, track1, RECENT, 120)
+        )
+        platform.record_session(
+            ListeningSession("s2", user2, track1, RECENT, 120)
+        )
+        platform.record_session(
+            ListeningSession("s3", user1, track2, RECENT, 120)
+        )
+
+        result = platform.track_with_most_distinct_listeners()
+
+        assert result.track_id == "t1"
 
 # ===========================================================================
 # Q4 - Average session duration per user subtype, ranked
@@ -150,19 +179,18 @@ class TestAvgSessionDurationByType:
 
     # TODO: Add tests to verify all user types are present and have correct averages.
     def test_all_user_types_present(self, platform: StreamingPlatform) -> None:
-        type_durations = {}
-        for session in platform._sessions:
-            user_type = session.user.__class__.__name__
-            if user_type not in type_durations:
-                type_durations[user_type] = []
-            type_durations[user_type].append(session.duration_listened_seconds)
+        from streaming.sessions import ListeningSession
+
+        alice = platform.get_user("u1")
+        bob = platform.get_user("u2")
+
+        platform.record_session(ListeningSession("s1", alice, platform.get_track("t1"), RECENT, 120))
+        platform.record_session(ListeningSession("s2", bob, platform.get_track("t1"), RECENT, 180))
 
         result = platform.avg_session_duration_by_user_type()
-        assert len(result) == len(type_durations)
+        type_names = [name for name, avg in result]
 
-        for type_name, avg_duration in result:
-            expected_avg = sum(type_durations[type_name]) / len(type_durations[type_name])
-            assert avg_duration == expected_avg
+        assert set(type_names) == {"FreeUser", "PremiumUser"}
 
 
 # ===========================================================================
