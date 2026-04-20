@@ -55,16 +55,16 @@ class TestTotalListeningTime:
     # TODO: Add a test that verifies the correct value for a known time period.
     #       Calculate the expected total based on the fixture data in conftest.py.
     def test_known_period_value(self, platform: StreamingPlatform) -> None:
-        from streaming.sessions import ListeningSession
-
-        user = platform.get_user("u1")
+        alice = platform.get_user("u1")   # i used alice from conftest because she already exist there
         track = platform.get_track("t1")
-        session = ListeningSession("s1", user, track, RECENT, 120)
+
+        session = ListeningSession("s1", user, track, RECENT, 120)      # i create one session just for testing time range
+
         platform.record_session(session)
         start = RECENT - timedelta(hours=1)
-        end = FIXED_NOW + timedelta(hours=1)
+        end = FIXED_NOW
         result = platform.total_listening_time_minutes(start, end)
-        assert result == 2.0
+        assert result == 3.0
 
 
 # ===========================================================================
@@ -95,14 +95,13 @@ class TestAvgUniqueTracksPremium:
     #       average for premium users. You'll need to count unique tracks
     #       per premium user and calculate the average.
     def test_correct_value(self, platform: StreamingPlatform) -> None:
-        from streaming.sessions import ListeningSession
 
-        bob = platform.get_user("u2")
+        bob = platform.get_user("u2") # i used bob because she was in the conftest as a premium useer
 
-        platform.record_session(ListeningSession("s1", bob, platform.get_track("t1"), RECENT, 180))
+        platform.record_session(ListeningSession("s1", bob, platform.get_track("t1"), RECENT, 180))   # i add 2 sessions so bob listen to 2 different tracks
         platform.record_session(ListeningSession("s2", bob, platform.get_track("t2"), RECENT, 210))
 
-        result = platform.avg_unique_tracks_per_premium_user(days=30)
+        result = platform.avg_unique_tracks_per_premium_user(days=30)  # this only checks the unic tracks
         assert result == 2.0
 
 
@@ -127,7 +126,6 @@ class TestTrackMostDistinctListeners:
     # TODO: Add a test that verifies the correct track is returned.
     #       Count listeners per track from the fixture data.
     def test_correct_track(self, platform: StreamingPlatform) -> None:
-        from streaming.sessions import ListeningSession
 
         user1 = platform.get_user("u1")
         user2 = platform.get_user("u2")
@@ -135,15 +133,10 @@ class TestTrackMostDistinctListeners:
         track1 = platform.get_track("t1")
         track2 = platform.get_track("t2")
 
-        platform.record_session(
-            ListeningSession("s1", user1, track1, RECENT, 120)
+        platform.record_session(ListeningSession("s1", user1, track1, RECENT, 120))
+        platform.record_session(ListeningSession("s2", user2, track1, RECENT, 120)
         )
-        platform.record_session(
-            ListeningSession("s2", user2, track1, RECENT, 120)
-        )
-        platform.record_session(
-            ListeningSession("s3", user1, track2, RECENT, 120)
-        )
+        platform.record_session(ListeningSession("s3", user1, track2, RECENT, 120))
 
         result = platform.track_with_most_distinct_listeners()
 
@@ -178,7 +171,6 @@ class TestAvgSessionDurationByType:
 
     # TODO: Add tests to verify all user types are present and have correct averages.
     def test_all_user_types_present(self, platform: StreamingPlatform) -> None:
-        from streaming.sessions import ListeningSession
 
         alice = platform.get_user("u1")
         bob = platform.get_user("u2")
@@ -219,14 +211,15 @@ class TestUnderageSubUserListening:
     # TODO: Add tests for correct values with default and custom thresholds.
     def test_correct_value_default_threshold(self, platform: StreamingPlatform) -> None:
         """Test correct value with default threshold (18)."""
+        # i loop over sessions to find underage users
+        #it is maybe too much because it can run without but makes me have beter struxture
         total_seconds = 0
         for session in platform._sessions:
             user = session.user
             if isinstance(user, FamilyMember) and user.age < 18:
                 total_seconds += session.duration_listened_seconds
-        expected = total_seconds / 60
         result = platform.total_listening_time_underage_sub_users_minutes(18)
-        assert result == expected
+        assert result == 5.00
 
     def test_custom_threshold(self, platform: StreamingPlatform) -> None:
         """Test with custom age threshold."""
@@ -236,10 +229,8 @@ class TestUnderageSubUserListening:
             user = session.user
             if isinstance(user, FamilyMember) and user.age < threshold:
                 total_seconds += session.duration_listened_seconds
-        expected = total_seconds / 60
         result = platform.total_listening_time_underage_sub_users_minutes(threshold)
-        assert result == expected
-
+        assert result == 5.0
 
 # ===========================================================================
 # Q6 - Top N artists by total listening time
@@ -277,24 +268,21 @@ class TestTopArtistsByListeningTime:
 
     # TODO: Add a test that verifies the correct artists and values.
     def test_top_artist(self, platform: StreamingPlatform) -> None:
-        from streaming.tracks import Song
-        artist_time = {}
-        for session in platform._sessions:
-            track = session.track
-            if isinstance(track, Song):
-                artist = track.artist
-                if artist not in artist_time:
-                    artist_time[artist] = 0
-                artist_time[artist] += session.duration_listened_seconds / 60
+        from streaming.sessions import ListeningSession
 
-        if not artist_time:
-            return
+        alice = platform.get_user("u1")
+        track1 = platform.get_track("t1")
+        track2 = platform.get_track("t2")
 
-        top_artist = max(artist_time, key=artist_time.get)
+        platform.record_session(ListeningSession("s1", alice, track1, RECENT, 180)) # i add 2 sessions to simulate listening
+        platform.record_session(ListeningSession("s2", alice, track2, RECENT, 120))
+
         result = platform.top_artists_by_listening_time(n=1)
-        if result:
-            assert result[0][0] == top_artist
 
+        artist, minutes = result[0]
+
+        assert artist.name == "Pixels"
+        assert minutes == 5.0
 
 # ===========================================================================
 # Q7 - User's top genre and percentage
@@ -427,7 +415,8 @@ class TestAvgTracksPerPlaylistType:
     def test_standard_playlist_average(self, platform: StreamingPlatform) -> None:
         from streaming.playlists import Playlist
         playlists = []
-        for p in platform._playlists.values():
+        
+        for p in platform._playlists.values():  # i only take normal playlist not collaborative ones
             if isinstance(p, Playlist) and not isinstance(p, CollaborativePlaylist):
                 playlists.append(p)
 
@@ -441,7 +430,7 @@ class TestAvgTracksPerPlaylistType:
 
     def test_collaborative_playlist_average(self, platform: StreamingPlatform) -> None:
         collabs = []
-        for p in platform._playlists.values():
+        for p in platform._playlists.values():  # i only take collaborative playlists here
             if isinstance(p, CollaborativePlaylist):
                 collabs.append(p)
 
