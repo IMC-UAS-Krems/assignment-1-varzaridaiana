@@ -18,9 +18,6 @@ from datetime import date
 from abc import ABC
 
 
-
-
-
 class Track(ABC):
     def __init__(self, track_id: str, title: str, duration_seconds: int, genre: str):
         self.track_id = track_id

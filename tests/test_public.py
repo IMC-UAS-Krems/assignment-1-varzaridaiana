@@ -54,7 +54,7 @@ class TestTotalListeningTime:
 
     # TODO: Add a test that verifies the correct value for a known time period.
     #       Calculate the expected total based on the fixture data in conftest.py.
-    def test_known_period_value(self, platform: StreamingPlatform) -> None:
+    def test_known_period_value(self , platform: StreamingPlatform) -> None:
         start = RECENT - timedelta(hours=1)
         end = FIXED_NOW + timedelta(hours=1)
         total_seconds = 0

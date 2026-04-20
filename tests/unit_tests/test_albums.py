@@ -1,5 +1,5 @@
 from streaming.albums import Album
-from streaming.tracks import AlbumTrack
+from streaming.tracks import *
 from streaming.artists import Artist
 
 

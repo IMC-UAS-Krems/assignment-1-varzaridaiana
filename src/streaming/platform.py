@@ -63,11 +63,11 @@ class StreamingPlatform:
 
     # Q1: Total listening time (in minutes) for a given period
     def total_listening_time_minutes(self, start: datetime, end: datetime) -> float:
-        total = 0
+        total = 0.0
         for s in self._sessions:
             if start <= s.timestamp <= end:
                 total += s.duration_listened_seconds / 60
-        return total
+        return float(total)
 
     # Q2: Average number of unique tracks listened per PremiumUser
     def avg_unique_tracks_per_premium_user(self, days: int = 30) -> float:
@@ -111,11 +111,11 @@ class StreamingPlatform:
 
     # Q5: Total listening time of underage FamilyMember users
     def total_listening_time_underage_sub_users_minutes(self, age_threshold: int = 18) -> float:
-        total = 0
+        total = 0.0
         for s in self._sessions:
             if isinstance(s.user, FamilyMember) and s.user.age < age_threshold:
                 total += s.duration_listened_seconds / 60
-        return total
+        return float(total)
 
     # Q6: Top N artists by total listening time
     def top_artists_by_listening_time(self, n: int = 5):
